@@ -6,9 +6,9 @@
  */
 
 typedef union {
-	uchar b[200];
-	ulong q[25];
-	uint d[50];
+  uchar b[160];
+  uint d[40];
+  ulong q[20];
 } ethhash;
 
 #define TH_ELT_SHORT(t, d, c) t = rotate(d, (ulong) 1) ^ c
@@ -97,18 +97,41 @@ __constant ulong keccakf_rndc[24] = {
 	0x8000000000008080, 0x0000000080000001, 0x8000000080008008
 };
 
-// Barely a bottleneck. No need to tinker more.
-void sha3_keccakf(ethhash * const h)
-{
-	ulong * const st = h->q;
-	h->d[33] ^= 0x80000000;
-	ulong t0, t1, t2, t3, t4, t5;
-
-	// Unrolling and removing PI stage gave negligable performance on GTX 1070.
-	for (int i = 0; i < 24; ++i) {
-		THETA(st[0], st[5], st[10], st[15], st[20], st[1], st[6], st[11], st[16], st[21], st[2], st[7], st[12], st[17], st[22], st[3], st[8], st[13], st[18], st[23], st[4], st[9], st[14], st[19], st[24]);
-		RHOPI(st[0], st[5], st[10], st[15], st[20], st[1], st[6], st[11], st[16], st[21], st[2], st[7], st[12], st[17], st[22], st[3], st[8], st[13], st[18], st[23], st[4], st[9], st[14], st[19], st[24]);
-		KHI(st[0], st[5], st[10], st[15], st[20], st[1], st[6], st[11], st[16], st[21], st[2], st[7], st[12], st[17], st[22], st[3], st[8], st[13], st[18], st[23], st[4], st[9], st[14], st[19], st[24]);
-		IOTA(st[0], keccakf_rndc[i]);
-	}
+void sha3_keccakf(ethhash *h) {
+  ulong st[25];
+  ulong t0, t1, t2, t3, t4, t5;
+  for (int i = 0; i < 17; ++i)
+    st[i] = h->q[i];
+  for (int i = 17; i < 25; ++i)
+    st[i] = 0;
+  for (int i = 0; i < 24; i++) {
+    THETA(st[0], st[5], st[10], st[15], st[20], st[1], st[6], st[11], st[16],
+          st[21], st[2], st[7], st[12], st[17], st[22], st[3], st[8], st[13],
+          st[18], st[23], st[4], st[9], st[14], st[19], st[24])
+    RHOPI(st[0], st[5], st[10], st[15], st[20], st[1], st[6], st[11], st[16],
+          st[21], st[2], st[7], st[12], st[17], st[22], st[3], st[8], st[13],
+          st[18], st[23], st[4], st[9], st[14], st[19], st[24])
+    KHI(st[0], st[5], st[10], st[15], st[20], st[1], st[6], st[11], st[16],
+        st[21], st[2], st[7], st[12], st[17], st[22], st[3], st[8], st[13],
+        st[18], st[23], st[4], st[9], st[14], st[19], st[24])
+    IOTA(st[0], keccakf_rndc[i])
+  }
+  for (int i = 0; i < 3; ++i)
+    st[i] ^= h->q[i + 17];
+  st[3] ^= 1UL;
+  st[16] ^= 1UL << 63;
+  for (int i = 0; i < 24; i++) {
+    THETA(st[0], st[5], st[10], st[15], st[20], st[1], st[6], st[11], st[16],
+          st[21], st[2], st[7], st[12], st[17], st[22], st[3], st[8], st[13],
+          st[18], st[23], st[4], st[9], st[14], st[19], st[24])
+    RHOPI(st[0], st[5], st[10], st[15], st[20], st[1], st[6], st[11], st[16],
+          st[21], st[2], st[7], st[12], st[17], st[22], st[3], st[8], st[13],
+          st[18], st[23], st[4], st[9], st[14], st[19], st[24])
+    KHI(st[0], st[5], st[10], st[15], st[20], st[1], st[6], st[11], st[16],
+        st[21], st[2], st[7], st[12], st[17], st[22], st[3], st[8], st[13],
+        st[18], st[23], st[4], st[9], st[14], st[19], st[24])
+    IOTA(st[0], keccakf_rndc[i])
+  }
+  for (int i = 0; i < 4; ++i)
+    h->q[i] = st[i];
 }

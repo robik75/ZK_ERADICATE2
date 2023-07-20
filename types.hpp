@@ -29,9 +29,9 @@ typedef struct {
 #pragma pack(pop)
 
 typedef union {
-	cl_uchar b[200];
-	cl_ulong q[25];
-	cl_uint d[50];
+	cl_uchar b[160];
+	cl_ulong q[20];
+	cl_uint d[40];
 } ethhash;
 
 #endif /* HPP_TYPES */

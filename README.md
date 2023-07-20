@@ -1,16 +1,14 @@
-# ERADICATE2
+# ZK_ERADICATE2
 ```
-usage: ./ERADICATE2 [OPTIONS]
+usage: ./ZK_ERADICATE2 [OPTIONS]
 
   Input:
     -A, --address           Target address
-    -I, --init-code         Init code
-    -i, --init-code-file    Read init code from this file
+    -I, --init-code-hash    Init code hash
+    -C, --calldata          Calldata
 
-    The init code should be expressed as a hexadecimal string having the
-    prefix 0x both when expressed on the command line with -I and in the
-    file pointed to by -i if used. Any whitespace will be trimmed. If no
-    init code is specified it defaults to an empty string.
+    The init code hash and calldata should be expressed as a hexadecimal string
+    having the prefix 0x both when expressed on the command line with -I and -C.
 
   Basic modes:
     --benchmark             Run without any scoring, a benchmark.
@@ -45,11 +43,11 @@ usage: ./ERADICATE2 [OPTIONS]
                             [default = 16777216]
 
   Examples:
-    ./ERADICATE2 -A 0x00000000000000000000000000000000deadbeef -I 0x00 --leading 0
-    ./ERADICATE2 -A 0x00000000000000000000000000000000deadbeef -I 0x00 --zeros
+    ./ZK_ERADICATE2 -A 0x00000000000000000000000000000000deadbeef -I 0x00 -C 0x --leading 0
+    ./ZK_ERADICATE2 -A 0x00000000000000000000000000000000deadbeef -I 0x00 -C 0x --zeros
 
   About:
-    ERADICATE2 is a vanity address generator for CREATE2 addresses that
+    ZK_ERADICATE2 is a vanity address generator for CREATE2 addresses that
 	utilizes computing power from GPUs using OpenCL.
 
     Author: Johan Gustafsson <johan@johgu.se>

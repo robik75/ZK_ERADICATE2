@@ -28,17 +28,19 @@ void eradicate2_score_doubles(const uchar * const hash, __global result * const 
 __kernel void eradicate2_iterate(__global result * const pResult, __global const mode * const pMode, const uchar scoreMax, const uint deviceIndex, const uint round) {
 	ethhash h = { .q = { ERADICATE2_INITHASH } };
 
-	// Salt have index h.b[21:52] inclusive, which covers WORDS with index h.d[6:12] inclusive (they represent h.b[24:51] inclusive)
-	// We use three out of those six words to generate a unique salt value for each device, thread and round. We ignore any overflows
+	// Salt has indexes h.b[64:96] exclusive, which covers WORDS with indexes h.d[16:24] exclusive.
+	// We use first three out of those eight words to generate a unique salt value for each device, thread and round. We ignore any overflows
 	// and assume that there'll never be more than 2**32 devices, threads or rounds. Worst case scenario with default settings
 	// of 16777216 = 2**24 threads means the assumption fails after a device has tried 2**32 * 2**24 = 2**56 salts, enough to match
 	// 14 characters in the address! A GTX 1070 with speed of ~700*10**6 combinations per second would hit this target after ~3 years.
-	h.d[6] += deviceIndex; 
-	h.d[7] += get_global_id(0);
-	h.d[8] += round;
+	h.d[16] += deviceIndex; 
+	h.d[17] += get_global_id(0);
+	h.d[18] += round;
 
 	// Hash
 	sha3_keccakf(&h);
+
+	const uchar * const pHash = h.b + 12;
 
 	/* enum class ModeFunction {
 	 *      Benchmark, ZeroBytes, Matching, Leading, Range, Mirror, Doubles, LeadingRange
@@ -46,35 +48,35 @@ __kernel void eradicate2_iterate(__global result * const pResult, __global const
 	 */
 	switch (pMode->function) {
 	case Benchmark:
-		eradicate2_score_benchmark(h.b + 12, pResult, pMode, scoreMax, deviceIndex, round);
+		eradicate2_score_benchmark(pHash, pResult, pMode, scoreMax, deviceIndex, round);
 		break;
 
 	case ZeroBytes:
-		eradicate2_score_zerobytes(h.b + 12, pResult, pMode, scoreMax, deviceIndex, round);
+		eradicate2_score_zerobytes(pHash, pResult, pMode, scoreMax, deviceIndex, round);
 		break;
 
 	case Matching:
-		eradicate2_score_matching(h.b + 12, pResult, pMode, scoreMax, deviceIndex, round);
+		eradicate2_score_matching(pHash, pResult, pMode, scoreMax, deviceIndex, round);
 		break;
 
 	case Leading:
-		eradicate2_score_leading(h.b + 12, pResult, pMode, scoreMax, deviceIndex, round);
+		eradicate2_score_leading(pHash, pResult, pMode, scoreMax, deviceIndex, round);
 		break;
 
 	case Range:
-		eradicate2_score_range(h.b + 12, pResult, pMode, scoreMax, deviceIndex, round);
+		eradicate2_score_range(pHash, pResult, pMode, scoreMax, deviceIndex, round);
 		break;
 
 	case Mirror:
-		eradicate2_score_mirror(h.b + 12, pResult, pMode, scoreMax, deviceIndex, round);
+		eradicate2_score_mirror(pHash, pResult, pMode, scoreMax, deviceIndex, round);
 		break;
 
 	case Doubles:
-		eradicate2_score_doubles(h.b + 12, pResult, pMode, scoreMax, deviceIndex, round);
+		eradicate2_score_doubles(pHash, pResult, pMode, scoreMax, deviceIndex, round);
 		break;
 
 	case LeadingRange:
-		eradicate2_score_leadingrange(h.b + 12, pResult, pMode, scoreMax, deviceIndex, round);
+		eradicate2_score_leadingrange(pHash, pResult, pMode, scoreMax, deviceIndex, round);
 		break;
 	}
 }
@@ -87,14 +89,14 @@ void eradicate2_result_update(const uchar * const H, __global result * const pRe
 		if (hasResult == 0) {
 			// Reconstruct state with hash and extract salt
 			ethhash h = { .q = { ERADICATE2_INITHASH } };
-			h.d[6] += deviceIndex;
-			h.d[7] += get_global_id(0);
-			h.d[8] += round;
+			h.d[16] += deviceIndex;
+			h.d[17] += get_global_id(0);
+			h.d[18] += round;
 
 			ethhash be;
 
 			for (int i = 0; i < 32; ++i) {
-				pResult[score].salt[i] = h.b[i + 21];
+				pResult[score].salt[i] = h.b[i + 64];
 			}
 
 			for (int i = 0; i < 20; ++i) {

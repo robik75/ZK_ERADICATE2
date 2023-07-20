@@ -2,7 +2,7 @@ CC=g++
 CDEFINES=
 SOURCES=Dispatcher.cpp eradicate2.cpp hexadecimal.cpp ModeFactory.cpp Speed.cpp sha3.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=ERADICATE2.x64
+EXECUTABLE=ZK_ERADICATE2
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)

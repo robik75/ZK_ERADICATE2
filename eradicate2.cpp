@@ -141,32 +141,23 @@ void trim(std::string & s) {
 	}
 }
 
-std::string makePreprocessorInitHashExpression(const std::string & strAddressBinary, const std::string & strInitCodeDigest) {
+std::string makePreprocessorInitHashExpression(const std::string & strDerivationPrefix, const std::string & strAddressBinary, const std::string & strInitCodeDigest, const std::string & strCalldataDigest) {
 	std::random_device rd;
 	std::mt19937_64 eng(rd());
 	std::uniform_int_distribution<unsigned int> distr; // C++ requires integer type: "C2338	note : char, signed char, unsigned char, int8_t, and uint8_t are not allowed"
-	ethhash h = { 0 };
+	ethhash h = {};
 
-	h.b[0] = 0xff;
-	for (int i = 0; i < 20; ++i) {
-		h.b[i + 1] = strAddressBinary[i];
-	}
-
-	for (int i = 0; i < 32; ++i) {
-		h.b[i + 21] = distr(eng);
-	}
-
-	for (int i = 0; i < 32; ++i) {
-		h.b[i + 53] = strInitCodeDigest[i];
-	}
-
-	h.b[85] ^= 0x01;
+	for (int i = 0; i < 32; ++i) h.b[i] = strDerivationPrefix[i];
+	for (int i = 0; i < 20; ++i) h.b[i + 44] = strAddressBinary[i];
+	for (int i = 0; i < 32; ++i) h.b[i + 64] = distr(eng);
+	for (int i = 0; i < 32; ++i) h.b[i + 96] = strInitCodeDigest[i];
+	for (int i = 0; i < 32; ++i) h.b[i + 128] = strCalldataDigest[i];
 
 	std::ostringstream oss;
 	oss << std::hex;
-	for (int i = 0; i < 25; ++i) {
+	for (int i = 0; i < 20; ++i) {
 		oss << "0x" << h.q[i];
-		if (i + 1 != 25) {
+		if (i + 1 != 20) {
 			oss << ",";
 		}
 	}
@@ -196,8 +187,8 @@ int main(int argc, char * * argv) {
 		size_t worksizeMax = 0; // Will be automatically determined later if not overriden by user
 		size_t size = 16777216;
 		std::string strAddress;
-		std::string strInitCode;
-		std::string strInitCodeFile;
+		std::string strInitCodeHash;
+		std::string strCalldata;
 
 		argp.addSwitch('h', "help", bHelp);
 		argp.addSwitch('0', "benchmark", bModeBenchmark);
@@ -218,8 +209,8 @@ int main(int argc, char * * argv) {
 		argp.addSwitch('W', "work-max", worksizeMax);
 		argp.addSwitch('S', "size", size);
 		argp.addSwitch('A', "address", strAddress);
-		argp.addSwitch('I', "init-code", strInitCode);
-		argp.addSwitch('i', "init-code-file", strInitCodeFile);
+		argp.addSwitch('I', "init-code-hash", strInitCodeHash);
+		argp.addSwitch('C', "calldata", strCalldata);
 
 		if (!argp.parse()) {
 			std::cout << "error: bad arguments, try again :<" << std::endl;
@@ -231,21 +222,13 @@ int main(int argc, char * * argv) {
 			return 0;
 		}
 
-		// Parse hexadecimal values and/or read init code from file
-		if (strInitCodeFile != "") {
-			std::ifstream ifs(strInitCodeFile);
-			if (!ifs.is_open()) {
-				std::cout << "error: failed to open input file for init code" << std::endl;
-				return 1;
-			}
-			strInitCode.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
-		}
-
-		trim(strInitCode);
+		trim(strCalldata);
+		const std::string strDerivationPrefix = parseHexadecimalBytes("0x2020dba91b30cc0006188af794c2fb30dd8520db7e2c088b7fc7c103c00ca494");
 		const std::string strAddressBinary = parseHexadecimalBytes(strAddress);
-		const std::string strInitCodeBinary = parseHexadecimalBytes(strInitCode);
-		const std::string strInitCodeDigest = keccakDigest(strInitCodeBinary);
-		const std::string strPreprocessorInitStructure = makePreprocessorInitHashExpression(strAddressBinary, strInitCodeDigest);
+		const std::string strInitCodeDigestBinary = parseHexadecimalBytes(strInitCodeHash);
+		const std::string strCalldataBinary = parseHexadecimalBytes(strCalldata);
+		const std::string strCalldataDigest = keccakDigest(strCalldataBinary);
+		const std::string strPreprocessorInitStructure = makePreprocessorInitHashExpression(strDerivationPrefix, strAddressBinary, strInitCodeDigestBinary, strCalldataDigest);
 
 		mode mode = ModeFactory::benchmark();
 		if (bModeBenchmark) {
